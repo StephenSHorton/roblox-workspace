@@ -20,10 +20,5 @@ export class LeaderboardService implements OnStart {
     points.Name = 'Points'
     points.Value = 0
     points.Parent = leaderstats
-
-    const level = new Instance('IntValue')
-    level.Name = 'Level'
-    level.Value = 0
-    level.Parent = leaderstats
   }
 }
