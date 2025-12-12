@@ -62,7 +62,7 @@ export class Coin
 		this.instance.Transparency = 1;
 
 		// Destroy the coin after the sound finishes
-		Debris.AddItem(this.instance, this.instance.CollectSound.TimeLength);
+		Debris.AddItem(this.instance, 2);
 	}
 
 	/**
