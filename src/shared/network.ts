@@ -1,6 +1,9 @@
 import { Networking } from "@flamework/networking";
 
-type ClientToServerEvents = {};
+type ClientToServerEvents = {
+	mouseTargetUpdated: (position: Vector3) => void;
+	mouseTargetClicked: (position: Vector3) => void;
+};
 
 type ServerToClientEvents = {};
 
