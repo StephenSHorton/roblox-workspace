@@ -8,19 +8,24 @@ interface CoinInstance extends BasePart {
 	CollectSound: Sound;
 }
 
-type Attributes = {};
+type Attributes = {
+	/** ScoreValue is the number of points awarded when the coin is collected. */
+	ScoreValue: number;
+};
 
 /**
  * Coin is a collectible component that awards points when touched by a player.
  */
 @Component({
 	tag: "Coin",
+	defaults: {
+		ScoreValue: 10,
+	},
 })
 export class Coin
 	extends BaseComponent<Attributes, CoinInstance>
 	implements OnStart
 {
-	private readonly SCORE_VALUE = 10;
 	private readonly maid = new Maid();
 
 	constructor(private leaderboardService: LeaderboardService) {
@@ -50,7 +55,7 @@ export class Coin
 		if (!player) return;
 
 		// Award points to the player
-		this.leaderboardService.changeScore(player, this.SCORE_VALUE);
+		this.leaderboardService.changeScore(player, this.attributes.ScoreValue);
 
 		// Play collect sound and hide the coin
 		this.instance.CollectSound.Play();
