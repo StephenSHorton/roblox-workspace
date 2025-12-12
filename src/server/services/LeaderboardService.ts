@@ -14,8 +14,8 @@ const DEFAULT_PLAYER_DATA: PlayerData = {
  */
 @Service({})
 export class LeaderboardService implements OnStart {
-	private playerStats: Map<Player, PlayerData> = new Map();
-	private dataStore = DataStoreService.GetDataStore("PlayerData");
+	private readonly playerStats: Map<Player, PlayerData> = new Map();
+	private readonly dataStore = DataStoreService.GetDataStore("PlayerData");
 
 	onStart() {
 		// Initialize leaderstats for each player when they join
