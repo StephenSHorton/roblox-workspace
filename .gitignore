@@ -4,3 +4,5 @@
 *.tsbuildinfo
 flamework.build
 aftman.toml
+
+.claude/settings.local.json
