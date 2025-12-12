@@ -64,3 +64,4 @@ Network events and functions are defined in `src/shared/network.ts` using `Netwo
 - Uses **ESLint** with roblox-ts plugin for linting
 - Unused variables should be prefixed with `_`
 - JSX uses Roact syntax (`Roact.createElement`)
+- Prefer early returns over nested conditionals to reduce nesting (e.g., `if (!condition) return;` instead of `if (condition) { ... }`)
