@@ -69,20 +69,20 @@ export class Coin
 	 * spinCoin creates and starts a continuous rotation animation for the coin.
 	 */
 	private spinCoin() {
-		// Create a tween that rotates the coin 180 degrees
-		const tween = TweenService.Create(
-			this.instance,
-			new TweenInfo(
-				5,
-				Enum.EasingStyle.Linear,
-				Enum.EasingDirection.InOut,
-				-1,
-				true,
-			),
-			{
-				CFrame: this.instance.CFrame.mul(CFrame.Angles(0, math.rad(180), 0)),
-			},
+		const info = new TweenInfo(
+			5, // Duration of 5 seconds
+			Enum.EasingStyle.Linear, // Linear easing for constant speed
+			Enum.EasingDirection.InOut, // Easing direction
+			-1, // Repeat indefinitely
+			true, // Reverse on each repeat
 		);
+
+		// Rotate 180 degrees around the Y-axis
+		const goal: Parameters<typeof TweenService.Create<CoinInstance>>[2] = {
+			CFrame: this.instance.CFrame.mul(CFrame.Angles(0, math.rad(180), 0)),
+		};
+
+		const tween = TweenService.Create(this.instance, info, goal);
 		tween.Play();
 
 		// Track the tween for cleanup
