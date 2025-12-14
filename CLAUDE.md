@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Roblox game project using **roblox-ts** (TypeScript for Roblox) and **Flamework** (a TypeScript framework for Roblox game architecture). The game concept is an Amazon Warehouse Simulator/Tycoon.
+This is a Roblox game project using **roblox-ts** (TypeScript for Roblox) and **Flamework** (a TypeScript framework for Roblox game architecture).
 
 ## Commands
 
