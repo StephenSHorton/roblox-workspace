@@ -64,7 +64,12 @@ export class CombatService implements OnStart {
 	 * Used by Dev B for loot drops and Dev C for game progression.
 	 */
 	readonly onEntityDied = new Signal<
-		(entityId: EntityId, position: Vector3, entityType: string, killer?: Player) => void
+		(
+			entityId: EntityId,
+			position: Vector3,
+			entityType: string,
+			killer?: Player,
+		) => void
 	>();
 
 	onStart() {
@@ -102,7 +107,12 @@ export class CombatService implements OnStart {
 		// Fire initial health state
 		const state = this.playerStates.get(player);
 		if (state) {
-			Events.HealthChanged.fire(player, this.getEntityId(player), state.health, state.maxHealth);
+			Events.HealthChanged.fire(
+				player,
+				this.getEntityId(player),
+				state.health,
+				state.maxHealth,
+			);
 		}
 	}
 
@@ -168,7 +178,12 @@ export class CombatService implements OnStart {
 			state.maxHealth = maxHealth;
 			if (state.health > maxHealth) {
 				state.health = maxHealth;
-				Events.HealthChanged.fire(player, this.getEntityId(player), state.health, state.maxHealth);
+				Events.HealthChanged.fire(
+					player,
+					this.getEntityId(player),
+					state.health,
+					state.maxHealth,
+				);
 			}
 		}
 	}
@@ -191,7 +206,12 @@ export class CombatService implements OnStart {
 		const state = this.playerStates.get(player);
 		if (state?.isAlive) {
 			state.health = math.min(state.health + amount, state.maxHealth);
-			Events.HealthChanged.fire(player, this.getEntityId(player), state.health, state.maxHealth);
+			Events.HealthChanged.fire(
+				player,
+				this.getEntityId(player),
+				state.health,
+				state.maxHealth,
+			);
 		}
 	}
 
@@ -210,7 +230,12 @@ export class CombatService implements OnStart {
 		}
 
 		state.health = math.max(0, state.health - amount);
-		Events.HealthChanged.fire(player, this.getEntityId(player), state.health, state.maxHealth);
+		Events.HealthChanged.fire(
+			player,
+			this.getEntityId(player),
+			state.health,
+			state.maxHealth,
+		);
 		Events.HitEffect.fire(player, this.getEntityId(player), amount);
 
 		// Check for death
@@ -224,10 +249,17 @@ export class CombatService implements OnStart {
 			Events.EntityDied.broadcast(this.getEntityId(player), attacker?.UserId);
 
 			// Fire signal for other services
-			this.onEntityDied.Fire(this.getEntityId(player), position, "Player", attacker);
+			this.onEntityDied.Fire(
+				this.getEntityId(player),
+				position,
+				"Player",
+				attacker,
+			);
 
 			// Handle character death
-			const humanoid = character?.FindFirstChild("Humanoid") as Humanoid | undefined;
+			const humanoid = character?.FindFirstChild("Humanoid") as
+				| Humanoid
+				| undefined;
 			if (humanoid) {
 				humanoid.Health = 0;
 			}
@@ -251,7 +283,11 @@ export class CombatService implements OnStart {
 
 		// Validate direction (prevent NaN from zero vector or malformed input)
 		const magnitude = direction.Magnitude;
-		if (magnitude === 0 || tostring(magnitude) === "nan" || magnitude === math.huge) {
+		if (
+			magnitude === 0 ||
+			tostring(magnitude) === "nan" ||
+			magnitude === math.huge
+		) {
 			return;
 		}
 
@@ -264,7 +300,9 @@ export class CombatService implements OnStart {
 		state.lastAttackTime = now;
 
 		const character = player.Character;
-		const rootPart = character?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+		const rootPart = character?.FindFirstChild("HumanoidRootPart") as
+			| BasePart
+			| undefined;
 		if (!rootPart) {
 			return;
 		}
@@ -273,13 +311,27 @@ export class CombatService implements OnStart {
 		const normalizedDirection = direction.Unit;
 
 		// Fire attack effect for VFX
-		Events.AttackEffect.broadcast(player.UserId, attackPosition, normalizedDirection);
+		Events.AttackEffect.broadcast(
+			player.UserId,
+			attackPosition,
+			normalizedDirection,
+		);
 
 		// Find and damage enemies in attack arc
-		this.performMeleeAttack(player, attackPosition, normalizedDirection, state.damage);
+		this.performMeleeAttack(
+			player,
+			attackPosition,
+			normalizedDirection,
+			state.damage,
+		);
 	}
 
-	private performMeleeAttack(player: Player, position: Vector3, direction: Vector3, damage: number): void {
+	private performMeleeAttack(
+		player: Player,
+		position: Vector3,
+		direction: Vector3,
+		damage: number,
+	): void {
 		const hitEnemies = new Set<string>();
 
 		// Get all enemies tagged with "Enemy"
@@ -287,12 +339,26 @@ export class CombatService implements OnStart {
 		for (const enemy of enemies) {
 			if (!enemy.IsA("Model")) continue;
 
-			const primaryPart = enemy.PrimaryPart ?? (enemy.FindFirstChild("HumanoidRootPart") as BasePart | undefined);
+			const primaryPart =
+				enemy.PrimaryPart ??
+				(enemy.FindFirstChild("HumanoidRootPart") as BasePart | undefined);
 			if (!primaryPart) continue;
 
-			if (isInAttackArc(position, direction, primaryPart.Position, PLAYER_ATTACK.range, PLAYER_ATTACK.arcDegrees)) {
+			if (
+				isInAttackArc(
+					position,
+					direction,
+					primaryPart.Position,
+					PLAYER_ATTACK.range,
+					PLAYER_ATTACK.arcDegrees,
+				)
+			) {
 				const enemyId = enemy.GetAttribute("EnemyId") as string | undefined;
-				if (enemyId && !hitEnemies.has(enemyId)) {
+				if (
+					enemyId !== undefined &&
+					enemyId !== "" &&
+					!hitEnemies.has(enemyId)
+				) {
 					hitEnemies.add(enemyId);
 					this.enemyService.dealDamageToEnemy(enemyId, damage, player);
 				}
@@ -306,10 +372,20 @@ export class CombatService implements OnStart {
 				if (!this.isPlayerAlive(otherPlayer)) continue;
 
 				const otherCharacter = otherPlayer.Character;
-				const otherRootPart = otherCharacter?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+				const otherRootPart = otherCharacter?.FindFirstChild(
+					"HumanoidRootPart",
+				) as BasePart | undefined;
 				if (!otherRootPart) continue;
 
-				if (isInAttackArc(position, direction, otherRootPart.Position, PLAYER_ATTACK.range, PLAYER_ATTACK.arcDegrees)) {
+				if (
+					isInAttackArc(
+						position,
+						direction,
+						otherRootPart.Position,
+						PLAYER_ATTACK.range,
+						PLAYER_ATTACK.arcDegrees,
+					)
+				) {
 					this.dealDamageToPlayer(otherPlayer, damage, player);
 				}
 			}
@@ -369,7 +445,12 @@ export class CombatService implements OnStart {
 			state.isAlive = true;
 			state.invulnerable = false;
 			state.lastAttackTime = 0;
-			Events.HealthChanged.fire(player, this.getEntityId(player), state.health, state.maxHealth);
+			Events.HealthChanged.fire(
+				player,
+				this.getEntityId(player),
+				state.health,
+				state.maxHealth,
+			);
 		}
 	}
 

@@ -1,8 +1,19 @@
 import { Dependency, type OnStart, Service } from "@flamework/core";
-import { CollectionService, RunService, ServerStorage, Workspace } from "@rbxts/services";
+import {
+	CollectionService,
+	RunService,
+	ServerStorage,
+	Workspace,
+} from "@rbxts/services";
 import { Events } from "server/network";
 import { ENEMY_AI } from "shared/config/combat";
-import { BOSS, BOSS_TEMPLATE_NAME, ENEMIES, type EnemyConfig, type EnemyType } from "shared/config/enemies";
+import {
+	BOSS,
+	BOSS_TEMPLATE_NAME,
+	ENEMIES,
+	type EnemyConfig,
+	type EnemyType,
+} from "shared/config/enemies";
 import { createEnemyEntityId } from "shared/network";
 import type { CombatService } from "./CombatService";
 
@@ -84,12 +95,20 @@ export class EnemyService implements OnStart {
 	 * Spawn a single enemy at position.
 	 * @returns Enemy ID if successful, undefined if template not found
 	 */
-	spawnEnemy(enemyType: EnemyType, position: Vector3, roomId?: string): string | undefined {
+	spawnEnemy(
+		enemyType: EnemyType,
+		position: Vector3,
+		roomId?: string,
+	): string | undefined {
 		const config = ENEMIES[enemyType];
 
 		// Clone enemy model from ServerStorage
-		const enemyModels = ServerStorage.FindFirstChild("Enemies") as Folder | undefined;
-		const template = enemyModels?.FindFirstChild(enemyType) as Model | undefined;
+		const enemyModels = ServerStorage.FindFirstChild("Enemies") as
+			| Folder
+			| undefined;
+		const template = enemyModels?.FindFirstChild(enemyType) as
+			| Model
+			| undefined;
 
 		if (!template) {
 			warn(`Enemy template not found: ${enemyType}`);
@@ -141,8 +160,14 @@ export class EnemyService implements OnStart {
 			const spawnRoomId = spawn.GetAttribute("RoomId") as string | undefined;
 			if (spawnRoomId !== roomId) continue;
 
-			const enemyType = spawn.GetAttribute("EnemyType") as EnemyType | undefined;
-			if (!enemyType || !(enemyType in ENEMIES)) {
+			const enemyType = spawn.GetAttribute("EnemyType") as
+				| EnemyType
+				| undefined;
+			if (
+				enemyType === undefined ||
+				enemyType === "" ||
+				!(enemyType in ENEMIES)
+			) {
 				warn(`Invalid enemy type on spawn point: ${enemyType}`);
 				continue;
 			}
@@ -188,8 +213,12 @@ export class EnemyService implements OnStart {
 	}
 
 	private updateEnemyAI(instance: EnemyInstance): void {
-		const humanoid = instance.model.FindFirstChild("Humanoid") as Humanoid | undefined;
-		const rootPart = instance.model.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+		const humanoid = instance.model.FindFirstChild("Humanoid") as
+			| Humanoid
+			| undefined;
+		const rootPart = instance.model.FindFirstChild("HumanoidRootPart") as
+			| BasePart
+			| undefined;
 
 		if (!humanoid || !rootPart) return;
 
@@ -219,16 +248,25 @@ export class EnemyService implements OnStart {
 		}
 	}
 
-	private handleChaseState(instance: EnemyInstance, position: Vector3, humanoid: Humanoid): void {
+	private handleChaseState(
+		instance: EnemyInstance,
+		position: Vector3,
+		humanoid: Humanoid,
+	): void {
 		// Check if target is still valid
-		if (!instance.target || !this.combatService.isPlayerAlive(instance.target)) {
+		if (
+			!instance.target ||
+			!this.combatService.isPlayerAlive(instance.target)
+		) {
 			instance.target = undefined;
 			instance.state = EnemyState.Idle;
 			return;
 		}
 
 		const targetCharacter = instance.target.Character;
-		const targetRootPart = targetCharacter?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+		const targetRootPart = targetCharacter?.FindFirstChild(
+			"HumanoidRootPart",
+		) as BasePart | undefined;
 		if (!targetRootPart) {
 			instance.target = undefined;
 			instance.state = EnemyState.Idle;
@@ -257,7 +295,11 @@ export class EnemyService implements OnStart {
 		humanoid.MoveTo(targetPosition);
 	}
 
-	private handleAttackState(instance: EnemyInstance, position: Vector3, humanoid: Humanoid): void {
+	private handleAttackState(
+		instance: EnemyInstance,
+		position: Vector3,
+		humanoid: Humanoid,
+	): void {
 		// Stop moving during attack
 		humanoid.MoveTo(position);
 
@@ -272,7 +314,9 @@ export class EnemyService implements OnStart {
 		// Attack complete, deal damage if target still in range
 		if (instance.target && this.combatService.isPlayerAlive(instance.target)) {
 			const targetCharacter = instance.target.Character;
-			const targetRootPart = targetCharacter?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+			const targetRootPart = targetCharacter?.FindFirstChild(
+				"HumanoidRootPart",
+			) as BasePart | undefined;
 
 			if (targetRootPart) {
 				const targetPosition = targetRootPart.Position;
@@ -280,7 +324,10 @@ export class EnemyService implements OnStart {
 
 				if (distance <= ENEMY_AI.attackRange) {
 					// Deal damage
-					this.combatService.dealDamageToPlayer(instance.target, instance.config.damage);
+					this.combatService.dealDamageToPlayer(
+						instance.target,
+						instance.config.damage,
+					);
 				}
 			}
 		}
@@ -290,13 +337,18 @@ export class EnemyService implements OnStart {
 		instance.attackStartTime = undefined;
 	}
 
-	private findNearestPlayer(position: Vector3, range: number): Player | undefined {
+	private findNearestPlayer(
+		position: Vector3,
+		range: number,
+	): Player | undefined {
 		let nearest: Player | undefined;
 		let nearestDistance = range;
 
 		for (const player of this.combatService.getAlivePlayers()) {
 			const character = player.Character;
-			const rootPart = character?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+			const rootPart = character?.FindFirstChild("HumanoidRootPart") as
+				| BasePart
+				| undefined;
 			if (!rootPart) continue;
 
 			const distance = position.sub(rootPart.Position).Magnitude;
@@ -337,13 +389,23 @@ export class EnemyService implements OnStart {
 
 	private handleEnemyDeath(instance: EnemyInstance, attacker?: Player): void {
 		const position = instance.model.GetPivot().Position;
-		const entityType = instance.isBoss ? "Boss" : (instance.model.GetAttribute("EnemyType") as string) ?? "Enemy";
+		const entityType = instance.isBoss
+			? "Boss"
+			: ((instance.model.GetAttribute("EnemyType") as string) ?? "Enemy");
 
 		// Fire network event
-		Events.EntityDied.broadcast(this.getEntityId(instance.id), attacker?.UserId);
+		Events.EntityDied.broadcast(
+			this.getEntityId(instance.id),
+			attacker?.UserId,
+		);
 
 		// Fire signal for loot drops and game flow
-		this.combatService.onEntityDied.Fire(this.getEntityId(instance.id), position, entityType, attacker);
+		this.combatService.onEntityDied.Fire(
+			this.getEntityId(instance.id),
+			position,
+			entityType,
+			attacker,
+		);
 
 		// Cleanup
 		instance.model.Destroy();
@@ -366,17 +428,25 @@ export class EnemyService implements OnStart {
 		}
 
 		if (bossSpawns.size() > 1) {
-			warn(`Multiple BossSpawn points found (${bossSpawns.size()}), using first one`);
+			warn(
+				`Multiple BossSpawn points found (${bossSpawns.size()}), using first one`,
+			);
 		}
 
 		const spawnPoint = bossSpawns[0] as BasePart;
 
 		// Clone boss model from ServerStorage
-		const enemyModels = ServerStorage.FindFirstChild("Enemies") as Folder | undefined;
-		const template = enemyModels?.FindFirstChild(BOSS_TEMPLATE_NAME) as Model | undefined;
+		const enemyModels = ServerStorage.FindFirstChild("Enemies") as
+			| Folder
+			| undefined;
+		const template = enemyModels?.FindFirstChild(BOSS_TEMPLATE_NAME) as
+			| Model
+			| undefined;
 
 		if (!template) {
-			warn(`Boss template "${BOSS_TEMPLATE_NAME}" not found in ServerStorage/Enemies`);
+			warn(
+				`Boss template "${BOSS_TEMPLATE_NAME}" not found in ServerStorage/Enemies`,
+			);
 			return undefined;
 		}
 
