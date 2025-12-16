@@ -14,20 +14,20 @@ export interface EnemyConfig {
 	readonly attackWindup: number;
 }
 
-/** Valid enemy type identifiers */
-export type EnemyType = "Goblin" | "Skeleton" | "Ogre";
-
 /**
  * Configuration for all enemy types in the dungeon.
  * Goblin: Fast, weak - swarm enemy
  * Skeleton: Balanced - standard enemy
  * Ogre: Slow, tanky - heavy enemy
  */
-export const ENEMIES = {
+export const ENEMIES: Record<string, EnemyConfig> = {
 	Goblin: { health: 30, damage: 8, speed: 18, attackWindup: 0.3 },
 	Skeleton: { health: 50, damage: 12, speed: 14, attackWindup: 0.5 },
 	Ogre: { health: 100, damage: 20, speed: 10, attackWindup: 0.8 },
-} as const satisfies Record<EnemyType, EnemyConfig>;
+};
+
+/** Valid enemy type identifiers (derived from ENEMIES keys) */
+export type EnemyType = keyof typeof ENEMIES;
 
 /**
  * Boss configuration - spawns at end of dungeon.
@@ -39,3 +39,6 @@ export const BOSS = {
 	speed: 8,
 	attackWindup: 1.0,
 } as const satisfies EnemyConfig;
+
+/** Template name for boss model in ServerStorage/Enemies */
+export const BOSS_TEMPLATE_NAME = "Boss";
