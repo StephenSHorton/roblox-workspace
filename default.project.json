@@ -53,6 +53,12 @@
 			"$properties": {
 				"RespectFilteringEnabled": true
 			}
+		},
+		"ServerStorage": {
+			"$className": "ServerStorage",
+			"Graveyard": {
+				"$path": "assets/Graveyard"
+			}
 		}
 	}
 }
