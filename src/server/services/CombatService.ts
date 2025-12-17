@@ -20,34 +20,6 @@ interface PlayerCombatState {
 }
 
 /**
- * Check if a target position is within attack arc.
- * @param attackerPos Position of the attacker
- * @param attackDirection Direction the attacker is facing/attacking
- * @param targetPos Position of the target
- * @param range Maximum range in studs
- * @param arcDegrees Total arc width in degrees
- * @returns true if target is within the attack arc
- */
-function isInAttackArc(
-	attackerPos: Vector3,
-	attackDirection: Vector3,
-	targetPos: Vector3,
-	range: number,
-	arcDegrees: number,
-): boolean {
-	const toTarget = targetPos.sub(attackerPos);
-	const distance = toTarget.Magnitude;
-
-	if (distance > range || distance === 0) return false;
-
-	const toTargetNormalized = toTarget.Unit;
-	const dot = attackDirection.Dot(toTargetNormalized);
-	const angleThreshold = math.cos(math.rad(arcDegrees / 2));
-
-	return dot >= angleThreshold;
-}
-
-/**
  * CombatService - Server-authoritative combat system.
  *
  * Manages all player combat state, damage dealing, and attack validation.
@@ -345,7 +317,7 @@ export class CombatService implements OnStart {
 			if (!primaryPart) continue;
 
 			if (
-				isInAttackArc(
+				this.isInAttackArc(
 					position,
 					direction,
 					primaryPart.Position,
@@ -378,7 +350,7 @@ export class CombatService implements OnStart {
 				if (!otherRootPart) continue;
 
 				if (
-					isInAttackArc(
+					this.isInAttackArc(
 						position,
 						direction,
 						otherRootPart.Position,
@@ -462,5 +434,33 @@ export class CombatService implements OnStart {
 		for (const [player] of this.playerStates) {
 			this.resetPlayer(player);
 		}
+	}
+
+	/**
+	 * Check if a target position is within attack arc.
+	 * @param attackerPos Position of the attacker
+	 * @param attackDirection Direction the attacker is facing/attacking
+	 * @param targetPos Position of the target
+	 * @param range Maximum range in studs
+	 * @param arcDegrees Total arc width in degrees
+	 * @returns true if target is within the attack arc
+	 */
+	private isInAttackArc(
+		attackerPos: Vector3,
+		attackDirection: Vector3,
+		targetPos: Vector3,
+		range: number,
+		arcDegrees: number,
+	): boolean {
+		const toTarget = targetPos.sub(attackerPos);
+		const distance = toTarget.Magnitude;
+
+		if (distance > range || distance === 0) return false;
+
+		const toTargetNormalized = toTarget.Unit;
+		const dot = attackDirection.Dot(toTargetNormalized);
+		const angleThreshold = math.cos(math.rad(arcDegrees / 2));
+
+		return dot >= angleThreshold;
 	}
 }
