@@ -1,4 +1,4 @@
-import { Dependency, type OnStart, Service } from "@flamework/core";
+import { type OnStart, Service } from "@flamework/core";
 import {
 	CollectionService,
 	RunService,
@@ -55,12 +55,10 @@ interface EnemyInstance {
 export class EnemyService implements OnStart {
 	private activeEnemies = new Map<string, EnemyInstance>();
 	private nextEnemyId = 0;
-	private combatService!: CombatService;
+
+	constructor(private combatService: CombatService) {}
 
 	onStart() {
-		// Initialize dependencies after Flamework ignites
-		this.combatService = Dependency<CombatService>();
-
 		// Run AI loop on heartbeat
 		RunService.Heartbeat.Connect((dt) => this.updateAI(dt));
 	}

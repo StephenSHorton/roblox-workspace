@@ -45,7 +45,8 @@ export class CombatService implements OnStart {
 	>();
 
 	onStart() {
-		// Initialize dependencies after Flamework ignites
+		// Use Dependency() to break circular dependency: CombatService <-> EnemyService
+		// EnemyService uses constructor injection for CombatService, so we defer here
 		this.enemyService = Dependency<import("./EnemyService").EnemyService>();
 
 		// Initialize state for players already in game
