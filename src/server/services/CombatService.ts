@@ -4,25 +4,28 @@ import Signal from "@rbxts/signal";
 import { Events } from "server/network";
 import { PLAYER, PLAYER_ATTACK } from "shared/config/combat";
 import { createPlayerEntityId, type EntityId } from "shared/network";
+import { BASE_STATS } from "shared/types/stats";
 
 /**
  * Combat state tracked for each player.
- * Managed by CombatService as the single source of truth.
+ * CombatService owns health and combat state; StatsService owns damage/attackSpeed/moveSpeed/maxHealth.
  */
 interface PlayerCombatState {
+	/** Current health - owned by CombatService */
 	health: number;
-	maxHealth: number;
-	damage: number;
-	attackSpeed: number;
+	/** Last attack timestamp for cooldown validation */
 	lastAttackTime: number;
+	/** Whether player is alive */
 	isAlive: boolean;
+	/** Whether player is invulnerable (during transitions) */
 	invulnerable: boolean;
 }
 
 /**
  * CombatService - Server-authoritative combat system.
  *
- * Manages all player combat state, damage dealing, and attack validation.
+ * Manages player combat state (health, alive status, invulnerability) and attack validation.
+ * Queries StatsService for damage/attackSpeed/maxHealth values.
  * Fires signals when entities die (used by loot and game flow systems).
  */
 @Service()
@@ -30,6 +33,7 @@ export class CombatService implements OnStart {
 	private playerStates = new Map<Player, PlayerCombatState>();
 	private pvpEnabled = false;
 	private enemyService!: import("./EnemyService").EnemyService;
+	private statsService!: import("./StatsService").StatsService;
 
 	/**
 	 * Fired when any entity (player or enemy) dies.
@@ -45,13 +49,18 @@ export class CombatService implements OnStart {
 	>();
 
 	onStart() {
-		// Use Dependency() to break circular dependency: CombatService <-> EnemyService
-		// EnemyService uses constructor injection for CombatService, so we defer here
+		// Use Dependency() to break circular dependency
 		this.enemyService = Dependency<import("./EnemyService").EnemyService>();
+		this.statsService = Dependency<import("./StatsService").StatsService>();
 
 		// Handle player join/leave
 		Players.PlayerAdded.Connect((player) => this.initializePlayer(player));
 		Players.PlayerRemoving.Connect((player) => this.cleanupPlayer(player));
+
+		// Handle existing players (in case service starts after players join)
+		for (const player of Players.GetPlayers()) {
+			this.initializePlayer(player);
+		}
 
 		// Listen for attack requests
 		Events.RequestAttack.connect((player, direction) => {
@@ -59,50 +68,41 @@ export class CombatService implements OnStart {
 		});
 	}
 
-	// ==================== DEVA-003: Player State Management ====================
+	// ==================== Player State Management ====================
 
 	private initializePlayer(player: Player): void {
+		// Don't re-initialize if already exists
+		if (this.playerStates.has(player)) return;
+
 		this.playerStates.set(player, {
 			health: PLAYER.health,
-			maxHealth: PLAYER.maxHealth,
-			damage: PLAYER.damage,
-			attackSpeed: PLAYER.attackSpeed,
 			lastAttackTime: 0,
 			isAlive: true,
 			invulnerable: false,
 		});
 
 		// Fire initial health state
-		const state = this.playerStates.get(player);
-		if (state) {
-			Events.HealthChanged.fire(
-				player,
-				this.getEntityId(player),
-				state.health,
-				state.maxHealth,
-			);
-		}
+		Events.HealthChanged.fire(
+			player,
+			this.getEntityId(player),
+			PLAYER.health,
+			PLAYER.maxHealth,
+		);
 	}
 
 	private cleanupPlayer(player: Player): void {
 		this.playerStates.delete(player);
 		// Notify EnemyService to clear any stale target references
-		this.enemyService.clearTargetReferences(player);
+		if (this.enemyService) {
+			this.enemyService.clearTargetReferences(player);
+		}
 	}
 
 	private getEntityId(player: Player): EntityId {
 		return createPlayerEntityId(player.UserId);
 	}
 
-	// ==================== DEVA-004: Player Stats Public API ====================
-
-	/**
-	 * Get player's current damage value.
-	 * Used by loot system to display/modify damage.
-	 */
-	getPlayerDamage(player: Player): number {
-		return this.playerStates.get(player)?.damage ?? PLAYER.damage;
-	}
+	// ==================== Player Stats Public API ====================
 
 	/**
 	 * Get player's current health.
@@ -112,59 +112,24 @@ export class CombatService implements OnStart {
 	}
 
 	/**
-	 * Get player's maximum health.
+	 * Get player's maximum health from StatsService.
 	 */
 	getMaxHealth(player: Player): number {
-		return this.playerStates.get(player)?.maxHealth ?? PLAYER.maxHealth;
+		return this.statsService?.getMaxHealth(player) ?? BASE_STATS.maxHealth;
 	}
 
 	/**
-	 * Get player's attack speed multiplier.
+	 * Get player's current damage from StatsService.
+	 */
+	getPlayerDamage(player: Player): number {
+		return this.statsService?.getPlayerDamage(player) ?? BASE_STATS.damage;
+	}
+
+	/**
+	 * Get player's attack speed from StatsService.
 	 */
 	getAttackSpeed(player: Player): number {
-		return this.playerStates.get(player)?.attackSpeed ?? PLAYER.attackSpeed;
-	}
-
-	/**
-	 * Set player's damage value.
-	 * Called by loot system when player picks up damage boost.
-	 */
-	setPlayerDamage(player: Player, damage: number): void {
-		const state = this.playerStates.get(player);
-		if (state) {
-			state.damage = damage;
-		}
-	}
-
-	/**
-	 * Set player's maximum health.
-	 * Clamps current health if it exceeds new max.
-	 */
-	setMaxHealth(player: Player, maxHealth: number): void {
-		const state = this.playerStates.get(player);
-		if (state) {
-			state.maxHealth = maxHealth;
-			if (state.health > maxHealth) {
-				state.health = maxHealth;
-				Events.HealthChanged.fire(
-					player,
-					this.getEntityId(player),
-					state.health,
-					state.maxHealth,
-				);
-			}
-		}
-	}
-
-	/**
-	 * Set player's attack speed multiplier.
-	 * Higher values = faster attacks.
-	 */
-	setAttackSpeed(player: Player, attackSpeed: number): void {
-		const state = this.playerStates.get(player);
-		if (state) {
-			state.attackSpeed = attackSpeed;
-		}
+		return this.statsService?.getAttackSpeed(player) ?? BASE_STATS.attackSpeed;
 	}
 
 	/**
@@ -173,17 +138,53 @@ export class CombatService implements OnStart {
 	healPlayer(player: Player, amount: number): void {
 		const state = this.playerStates.get(player);
 		if (state?.isAlive) {
-			state.health = math.min(state.health + amount, state.maxHealth);
+			const maxHealth = this.getMaxHealth(player);
+			state.health = math.min(state.health + amount, maxHealth);
 			Events.HealthChanged.fire(
 				player,
 				this.getEntityId(player),
 				state.health,
-				state.maxHealth,
+				maxHealth,
 			);
 		}
 	}
 
-	// ==================== DEVA-005: Player Damage & Death System ====================
+	/**
+	 * Set player's health to a specific value.
+	 * Used when maxHealth changes and health needs to be clamped.
+	 */
+	setPlayerHealth(player: Player, health: number): void {
+		const state = this.playerStates.get(player);
+		if (state) {
+			const maxHealth = this.getMaxHealth(player);
+			state.health = math.clamp(health, 0, maxHealth);
+			Events.HealthChanged.fire(
+				player,
+				this.getEntityId(player),
+				state.health,
+				maxHealth,
+			);
+		}
+	}
+
+	/**
+	 * Called by StatsService when maxHealth changes.
+	 * Clamps current health if it exceeds new max.
+	 */
+	onMaxHealthChanged(player: Player, newMaxHealth: number): void {
+		const state = this.playerStates.get(player);
+		if (state && state.health > newMaxHealth) {
+			state.health = newMaxHealth;
+			Events.HealthChanged.fire(
+				player,
+				this.getEntityId(player),
+				state.health,
+				newMaxHealth,
+			);
+		}
+	}
+
+	// ==================== Player Damage & Death System ====================
 
 	/**
 	 * Deal damage to a player. Server-authoritative.
@@ -197,12 +198,13 @@ export class CombatService implements OnStart {
 			return;
 		}
 
+		const maxHealth = this.getMaxHealth(player);
 		state.health = math.max(0, state.health - amount);
 		Events.HealthChanged.fire(
 			player,
 			this.getEntityId(player),
 			state.health,
-			state.maxHealth,
+			maxHealth,
 		);
 		Events.HitEffect.fire(player, this.getEntityId(player), amount);
 
@@ -241,7 +243,7 @@ export class CombatService implements OnStart {
 		return this.playerStates.get(player)?.isAlive ?? false;
 	}
 
-	// ==================== DEVA-006: Melee Attack System ====================
+	// ==================== Melee Attack System ====================
 
 	private handleAttackRequest(player: Player, direction: Vector3): void {
 		const state = this.playerStates.get(player);
@@ -259,9 +261,10 @@ export class CombatService implements OnStart {
 			return;
 		}
 
-		// Validate cooldown
+		// Validate cooldown using attackSpeed from StatsService
 		const now = os.clock();
-		const cooldown = PLAYER_ATTACK.cooldown / state.attackSpeed;
+		const attackSpeed = this.getAttackSpeed(player);
+		const cooldown = PLAYER_ATTACK.cooldown / attackSpeed;
 		if (now - state.lastAttackTime < cooldown) {
 			return; // Rapid request ignored
 		}
@@ -285,12 +288,15 @@ export class CombatService implements OnStart {
 			normalizedDirection,
 		);
 
+		// Get damage from StatsService
+		const damage = this.getPlayerDamage(player);
+
 		// Find and damage enemies in attack arc
 		this.performMeleeAttack(
 			player,
 			attackPosition,
 			normalizedDirection,
-			state.damage,
+			damage,
 		);
 	}
 
@@ -325,7 +331,8 @@ export class CombatService implements OnStart {
 				if (
 					enemyId !== undefined &&
 					enemyId !== "" &&
-					!hitEnemies.has(enemyId)
+					!hitEnemies.has(enemyId) &&
+					this.enemyService
 				) {
 					hitEnemies.add(enemyId);
 					this.enemyService.dealDamageToEnemy(enemyId, damage, player);
@@ -333,7 +340,7 @@ export class CombatService implements OnStart {
 			}
 		}
 
-		// ==================== DEVA-007: PvP System ====================
+		// PvP System
 		if (this.pvpEnabled) {
 			for (const otherPlayer of Players.GetPlayers()) {
 				if (otherPlayer === player) continue;
@@ -375,7 +382,7 @@ export class CombatService implements OnStart {
 		return this.pvpEnabled;
 	}
 
-	// ==================== DEVA-008: Game Flow Utility Methods ====================
+	// ==================== Game Flow Utility Methods ====================
 
 	/**
 	 * Set player invulnerability.
@@ -409,7 +416,8 @@ export class CombatService implements OnStart {
 	resetPlayer(player: Player): void {
 		const state = this.playerStates.get(player);
 		if (state) {
-			state.health = state.maxHealth;
+			const maxHealth = this.getMaxHealth(player);
+			state.health = maxHealth;
 			state.isAlive = true;
 			state.invulnerable = false;
 			state.lastAttackTime = 0;
@@ -417,7 +425,7 @@ export class CombatService implements OnStart {
 				player,
 				this.getEntityId(player),
 				state.health,
-				state.maxHealth,
+				maxHealth,
 			);
 		}
 	}

@@ -20,14 +20,17 @@ export interface EnemyConfig {
  * Skeleton: Balanced - standard enemy
  * Ogre: Slow, tanky - heavy enemy
  */
-export const ENEMIES: Record<string, EnemyConfig> = {
+export const ENEMIES = {
 	Goblin: { health: 30, damage: 8, speed: 18, attackWindup: 0.3 },
 	Skeleton: { health: 50, damage: 12, speed: 14, attackWindup: 0.5 },
 	Ogre: { health: 100, damage: 20, speed: 10, attackWindup: 0.8 },
-};
+} as const satisfies Record<string, EnemyConfig>;
 
-/** Valid enemy type identifiers (derived from ENEMIES keys) */
+/** Valid enemy type identifiers (excluding Boss which has its own config) */
 export type EnemyType = keyof typeof ENEMIES;
+
+/** All possible entity types including Boss */
+export type EntityType = EnemyType | "Boss";
 
 /**
  * Boss configuration - spawns at end of dungeon.

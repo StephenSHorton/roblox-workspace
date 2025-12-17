@@ -9,6 +9,7 @@ import {
 	ENEMIES,
 	type EnemyConfig,
 	type EnemyType,
+	type EntityType,
 } from "shared/config/enemies";
 import { createEnemyEntityId, type EntityId } from "shared/network";
 
@@ -61,19 +62,18 @@ export class EnemyComponent
 	}
 
 	onStart() {
-		// Read attributes from model
-		const enemyType = this.attributes.EnemyType as EnemyType;
+		// Read attributes from model - can be EnemyType or "Boss"
+		const enemyType = this.attributes.EnemyType as EntityType;
 		this.roomId = this.attributes.RoomId;
 
-		// Determine if this is a boss (has "Boss" tag)
-		this.isBoss = this.instance.HasTag("Boss");
+		// Determine if this is a boss (check tag OR attribute - tag takes precedence)
+		this.isBoss = this.instance.HasTag("Boss") || enemyType === "Boss";
 
 		// Get config based on enemy type
-		if (this.isBoss || enemyType === "Boss") {
+		if (this.isBoss) {
 			this.config = BOSS;
-			this.isBoss = true;
 		} else if (enemyType in ENEMIES) {
-			this.config = ENEMIES[enemyType];
+			this.config = ENEMIES[enemyType as EnemyType];
 		} else {
 			warn(`Unknown enemy type: ${enemyType}, using default config`);
 			this.config = { health: 50, damage: 10, speed: 12, attackWindup: 0.5 };

@@ -60,4 +60,5 @@ export const LOOT_TABLES: Readonly<Record<string, EnemyLootTable>> = {
 };
 
 export const BOSS_DROP_COUNT = { min: 2, max: 3 } as const;
-export const LOOT_DESPAWN_TIME = 30; // seconds
+/** Time in seconds before uncollected loot despawns */
+export const LOOT_DESPAWN_TIME = 60;

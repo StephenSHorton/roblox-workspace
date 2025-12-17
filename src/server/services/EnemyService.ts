@@ -115,11 +115,7 @@ export class EnemyService implements OnStart {
 			const enemyType = spawn.GetAttribute("EnemyType") as
 				| EnemyType
 				| undefined;
-			if (
-				enemyType === undefined ||
-				enemyType === "" ||
-				!(enemyType in ENEMIES)
-			) {
+			if (enemyType === undefined || !(enemyType in ENEMIES)) {
 				warn(`Invalid enemy type on spawn point: ${enemyType}`);
 				continue;
 			}

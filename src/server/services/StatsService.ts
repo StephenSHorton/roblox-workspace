@@ -4,10 +4,13 @@
  * Manages player stats that affect gameplay during a run:
  * damage, attackSpeed, moveSpeed, maxHealth.
  *
+ * This is the SINGLE SOURCE OF TRUTH for player stats.
+ * CombatService queries this service for stat values.
+ *
  * All stats are additive only and reset between runs.
  */
 
-import { type OnStart, Service } from "@flamework/core";
+import { Dependency, type OnStart, Service } from "@flamework/core";
 import { Players } from "@rbxts/services";
 import { Events } from "server/network";
 import { BASE_STATS, type PlayerStats } from "shared/types/stats";
@@ -16,17 +19,27 @@ import type { CombatService } from "./CombatService";
 @Service()
 export class StatsService implements OnStart {
 	private playerStats = new Map<Player, PlayerStats>();
-
-	constructor(private combatService: CombatService) {}
+	private combatService!: CombatService;
 
 	onStart(): void {
+		// Use Dependency() to break circular dependency with CombatService
+		this.combatService = Dependency<CombatService>();
+
 		Players.PlayerAdded.Connect((player) => this.initializePlayer(player));
 		Players.PlayerRemoving.Connect((player) => this.cleanupPlayer(player));
+
+		// Handle existing players (in case service starts after players join)
+		for (const player of Players.GetPlayers()) {
+			this.initializePlayer(player);
+		}
 	}
 
 	// ==================== Player Lifecycle ====================
 
 	private initializePlayer(player: Player): void {
+		// Don't re-initialize if already exists
+		if (this.playerStats.has(player)) return;
+
 		const stats: PlayerStats = { ...BASE_STATS };
 		this.playerStats.set(player, stats);
 
@@ -80,21 +93,45 @@ export class StatsService implements OnStart {
 	 *
 	 * Side effects:
 	 * - moveSpeed: immediately updates Humanoid.WalkSpeed
-	 * - maxHealth: heals player by the gained amount
+	 * - maxHealth: notifies CombatService and heals player by the gained amount
 	 */
 	modifyStat(player: Player, stat: keyof PlayerStats, amount: number): void {
 		const stats = this.playerStats.get(player);
 		if (!stats) return;
 
-		stats[stat] += amount;
+		// Validate amount: must be finite and non-negative for loot gains
+		const isInvalidNumber =
+			!typeIs(amount, "number") ||
+			tostring(amount) === "nan" ||
+			amount === math.huge ||
+			amount < 0;
+		if (isInvalidNumber) {
+			warn(
+				`[StatsService] Invalid stat modification: ${stat} by ${amount} for ${player.Name}`,
+			);
+			return;
+		}
 
-		// Side effects based on stat type
+		// Cap stat values to reasonable maximums to prevent exploits
+		const MAX_STAT_VALUES: Record<keyof PlayerStats, number> = {
+			damage: 10000,
+			attackSpeed: 10,
+			moveSpeed: 100,
+			maxHealth: 100000,
+		};
+
+		const newValue = math.min(stats[stat] + amount, MAX_STAT_VALUES[stat]);
+		stats[stat] = newValue;
+
+		// Handle stat-specific side effects
+		if (stat === "maxHealth") {
+			// Notify CombatService about max health change (for clamping)
+			this.combatService.onMaxHealthChanged(player, stats.maxHealth);
+			// Also heal by the amount gained
+			this.combatService.healPlayer(player, amount);
+		}
 		if (stat === "moveSpeed") {
 			this.applyMoveSpeed(player, stats.moveSpeed);
-		}
-		if (stat === "maxHealth") {
-			// Heal by the amount gained
-			this.combatService.healPlayer(player, amount);
 		}
 
 		// Replicate to client
