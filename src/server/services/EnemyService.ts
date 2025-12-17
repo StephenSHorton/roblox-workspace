@@ -17,6 +17,9 @@ import {
 import { createEnemyEntityId } from "shared/network";
 import type { CombatService } from "./CombatService";
 
+/** Enemy models folder in ServerStorage. Loaded once at module initialization. */
+const EnemyModels = ServerStorage.WaitForChild("Enemies") as Folder;
+
 /**
  * Enemy AI states.
  */
@@ -100,14 +103,7 @@ export class EnemyService implements OnStart {
 	): string | undefined {
 		const config = ENEMIES[enemyType];
 
-		// Clone enemy model from ServerStorage
-		const enemyModels = ServerStorage.FindFirstChild("Enemies") as
-			| Folder
-			| undefined;
-		const template = enemyModels?.FindFirstChild(enemyType) as
-			| Model
-			| undefined;
-
+		const template = EnemyModels.FindFirstChild(enemyType) as Model | undefined;
 		if (!template) {
 			warn(`Enemy template not found: ${enemyType}`);
 			return undefined;
@@ -433,14 +429,9 @@ export class EnemyService implements OnStart {
 
 		const spawnPoint = bossSpawns[0] as BasePart;
 
-		// Clone boss model from ServerStorage
-		const enemyModels = ServerStorage.FindFirstChild("Enemies") as
-			| Folder
-			| undefined;
-		const template = enemyModels?.FindFirstChild(BOSS_TEMPLATE_NAME) as
+		const template = EnemyModels.FindFirstChild(BOSS_TEMPLATE_NAME) as
 			| Model
 			| undefined;
-
 		if (!template) {
 			warn(
 				`Boss template "${BOSS_TEMPLATE_NAME}" not found in ServerStorage/Enemies`,
