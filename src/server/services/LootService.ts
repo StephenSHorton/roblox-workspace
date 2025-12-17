@@ -22,7 +22,7 @@ import {
 	RARITY_MULTIPLIERS,
 } from "shared/config/loot";
 import type { LootRarity, PlayerStats } from "shared/types/stats";
-import type { CombatService } from "./CombatServiceStub";
+import type { CombatService } from "./CombatService";
 import type { StatsService } from "./StatsService";
 
 interface ActiveLoot {

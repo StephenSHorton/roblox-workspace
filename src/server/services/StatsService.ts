@@ -11,7 +11,7 @@ import { type OnStart, Service } from "@flamework/core";
 import { Players } from "@rbxts/services";
 import { Events } from "server/network";
 import { BASE_STATS, type PlayerStats } from "shared/types/stats";
-import type { CombatService } from "./CombatServiceStub";
+import type { CombatService } from "./CombatService";
 
 @Service()
 export class StatsService implements OnStart {
