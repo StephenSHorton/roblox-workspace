@@ -49,11 +49,6 @@ export class CombatService implements OnStart {
 		// EnemyService uses constructor injection for CombatService, so we defer here
 		this.enemyService = Dependency<import("./EnemyService").EnemyService>();
 
-		// Initialize state for players already in game
-		for (const player of Players.GetPlayers()) {
-			this.initializePlayer(player);
-		}
-
 		// Handle player join/leave
 		Players.PlayerAdded.Connect((player) => this.initializePlayer(player));
 		Players.PlayerRemoving.Connect((player) => this.cleanupPlayer(player));
