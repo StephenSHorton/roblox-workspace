@@ -1,12 +1,22 @@
 import { Networking } from "@flamework/networking";
+import type { LootRarity, PlayerStats } from "./types/stats";
 
-type ClientToServerEvents = {};
+interface ClientToServerEvents {}
 
-type ServerToClientEvents = {};
+interface ServerToClientEvents {
+	/** Full stats update sent when stats change */
+	StatsUpdated: (stats: PlayerStats) => void;
+	/** Individual stat gain notification for UI popups */
+	StatGained: (statName: keyof PlayerStats, amount: number) => void;
+	/** Loot spawned in the world */
+	LootSpawned: (lootId: string, position: Vector3, rarity: LootRarity) => void;
+	/** Loot was collected by a player */
+	LootCollected: (lootId: string, collectorUserId: number) => void;
+}
 
-type ClientToServerFunctions = {};
+interface ClientToServerFunctions {}
 
-type ServerToClientFunctions = {};
+interface ServerToClientFunctions {}
 
 export const GlobalEvents = Networking.createEvent<
 	ClientToServerEvents,
