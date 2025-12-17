@@ -1,4 +1,5 @@
 import { Networking } from "@flamework/networking";
+import type { LootRarity, PlayerStats } from "./types/stats";
 
 /**
  * Branded type for entity identifiers.
@@ -38,6 +39,7 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
+	// Combat events (from PR #7)
 	/** Entity health changed (player or enemy) */
 	HealthChanged: (entityId: EntityId, current: number, max: number) => void;
 	/** Entity died (player or enemy) */
@@ -48,6 +50,16 @@ interface ServerToClientEvents {
 	HitEffect: (entityId: EntityId, damage: number) => void;
 	/** Boss health changed (for boss health bar UI) */
 	BossHealthChanged: (current: number, max: number) => void;
+
+	// Stats & Loot events
+	/** Full stats update sent when stats change */
+	StatsUpdated: (stats: PlayerStats) => void;
+	/** Individual stat gain notification for UI popups */
+	StatGained: (statName: keyof PlayerStats, amount: number) => void;
+	/** Loot spawned in the world */
+	LootSpawned: (lootId: string, position: Vector3, rarity: LootRarity) => void;
+	/** Loot was collected by a player */
+	LootCollected: (lootId: string, collectorUserId: number) => void;
 }
 
 interface ClientToServerFunctions {}
