@@ -5,7 +5,12 @@
  */
 
 import Roact from "@rbxts/roact";
-import { useEffect, useState, withHooks } from "@rbxts/roact-hooked";
+import {
+	useEffect,
+	useMutable,
+	useState,
+	withHooks,
+} from "@rbxts/roact-hooked";
 import type { PlayerStats } from "shared/types/stats";
 
 interface StatPopupProps {
@@ -35,6 +40,7 @@ function StatPopupComponent({
 }: StatPopupProps): Roact.Element {
 	const [transparency, setTransparency] = useState(1);
 	const [offsetY, setOffsetY] = useState(0);
+	const isMounted = useMutable(true);
 
 	const formatAmount = (stat: keyof PlayerStats, value: number): string => {
 		if (stat === "attackSpeed") {
@@ -44,26 +50,37 @@ function StatPopupComponent({
 	};
 
 	useEffect(() => {
+		// Mark as mounted
+		isMounted.current = true;
+
 		// Animate in
 		task.spawn(() => {
 			// Fade in quickly
 			for (let i = 0; i <= 10; i++) {
+				if (!isMounted.current) return;
 				setTransparency(1 - i / 10);
 				task.wait(0.02);
 			}
 
 			// Float upward slowly
 			for (let i = 0; i < 80; i++) {
+				if (!isMounted.current) return;
 				setOffsetY(-i * 0.5);
 				task.wait(0.02);
 			}
 
 			// Fade out
 			for (let i = 0; i <= 10; i++) {
+				if (!isMounted.current) return;
 				setTransparency(i / 10);
 				task.wait(0.02);
 			}
 		});
+
+		// Cleanup: mark as unmounted to stop animation
+		return () => {
+			isMounted.current = false;
+		};
 	}, []);
 
 	return (

@@ -29,6 +29,9 @@ const STAT_ORDER: (keyof PlayerStats)[] = [
 	"maxHealth",
 ];
 
+/** Maximum number of concurrent popups to display */
+const MAX_POPUPS = 5;
+
 function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 	const [stats, setStats] = useState(controller.getStats());
 	const [popups, setPopups] = useState<
@@ -42,7 +45,20 @@ function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 
 		const gainConnection = controller.onStatGained.Connect((stat, amount) => {
 			const id = `${stat}_${os.clock()}`;
-			setPopups((prev) => [...prev, { id, stat, amount }]);
+			setPopups((prev) => {
+				const newPopups = [...prev, { id, stat, amount }];
+				// Limit popups to MAX_POPUPS, removing oldest if exceeded
+				if (newPopups.size() > MAX_POPUPS) {
+					// Remove oldest popups to stay under limit
+					const startIndex = newPopups.size() - MAX_POPUPS;
+					const limited: typeof newPopups = [];
+					for (let i = startIndex; i < newPopups.size(); i++) {
+						limited.push(newPopups[i]);
+					}
+					return limited;
+				}
+				return newPopups;
+			});
 
 			// Remove popup after animation (2 seconds)
 			task.delay(2, () => {
@@ -64,10 +80,9 @@ function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 	};
 
 	return (
-		<screengui Key="StatsHud" ResetOnSpawn={false} ZIndexBehavior="Sibling">
+		<screengui ResetOnSpawn={false} ZIndexBehavior="Sibling">
 			{/* Stats Panel */}
 			<frame
-				Key="StatsPanel"
 				AnchorPoint={new Vector2(0, 0)}
 				Position={new UDim2(0, 10, 0, 10)}
 				Size={new UDim2(0, 150, 0, 120)}
@@ -86,7 +101,6 @@ function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 
 				{/* Title */}
 				<textlabel
-					Key="Title"
 					LayoutOrder={0}
 					Size={new UDim2(1, 0, 0, 20)}
 					BackgroundTransparency={1}
@@ -100,13 +114,11 @@ function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 				{/* Stat Rows */}
 				{STAT_ORDER.map((stat, index) => (
 					<frame
-						Key={stat}
 						LayoutOrder={index + 1}
 						Size={new UDim2(1, 0, 0, 18)}
 						BackgroundTransparency={1}
 					>
 						<textlabel
-							Key="Label"
 							Size={new UDim2(0.4, 0, 1, 0)}
 							BackgroundTransparency={1}
 							TextColor3={Color3.fromRGB(180, 180, 180)}
@@ -116,7 +128,6 @@ function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 							TextXAlignment="Left"
 						/>
 						<textlabel
-							Key="Value"
 							Position={new UDim2(0.4, 0, 0, 0)}
 							Size={new UDim2(0.6, 0, 1, 0)}
 							BackgroundTransparency={1}
@@ -132,19 +143,13 @@ function StatsHudComponent({ controller }: StatsHudProps): Roact.Element {
 
 			{/* Stat Popups Container */}
 			<frame
-				Key="PopupsContainer"
 				AnchorPoint={new Vector2(0.5, 0.5)}
 				Position={new UDim2(0.5, 0, 0.4, 0)}
 				Size={new UDim2(0, 300, 0, 200)}
 				BackgroundTransparency={1}
 			>
 				{popups.map((popup, index) => (
-					<StatPopup
-						Key={popup.id}
-						stat={popup.stat}
-						amount={popup.amount}
-						index={index}
-					/>
+					<StatPopup stat={popup.stat} amount={popup.amount} index={index} />
 				))}
 			</frame>
 		</screengui>

@@ -31,6 +31,7 @@ interface ActiveLoot {
 	amount: number;
 	rarity: LootRarity;
 	despawnThread?: thread;
+	touchConnection?: RBXScriptConnection;
 }
 
 @Service()
@@ -123,6 +124,10 @@ export class LootService implements OnStart {
 	 */
 	despawnAllLoot(): void {
 		for (const [lootId, loot] of this.activeLoot) {
+			// Disconnect touch connection to prevent memory leak
+			if (loot.touchConnection) {
+				loot.touchConnection.Disconnect();
+			}
 			if (loot.despawnThread) {
 				task.cancel(loot.despawnThread);
 			}
@@ -173,7 +178,7 @@ export class LootService implements OnStart {
 		loot.Parent = Workspace;
 
 		// Set up touch collection
-		const _connection = loot.Touched.Connect((hit) => {
+		const touchConnection = loot.Touched.Connect((hit) => {
 			this.handleLootTouch(lootId, hit);
 		});
 
@@ -183,6 +188,7 @@ export class LootService implements OnStart {
 			stat,
 			amount,
 			rarity,
+			touchConnection,
 		};
 
 		// Set up despawn timer
@@ -224,6 +230,11 @@ export class LootService implements OnStart {
 		// Remove from active loot first (prevents double collection)
 		this.activeLoot.delete(lootId);
 
+		// Disconnect touch connection to prevent memory leak
+		if (loot.touchConnection) {
+			loot.touchConnection.Disconnect();
+		}
+
 		// Cancel despawn timer
 		if (loot.despawnThread) {
 			task.cancel(loot.despawnThread);
@@ -247,6 +258,12 @@ export class LootService implements OnStart {
 		if (!loot) return;
 
 		this.activeLoot.delete(lootId);
+
+		// Disconnect touch connection to prevent memory leak
+		if (loot.touchConnection) {
+			loot.touchConnection.Disconnect();
+		}
+
 		loot.part.Destroy();
 	}
 
