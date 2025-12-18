@@ -1,5 +1,5 @@
-import type { Components } from "@flamework/components";
-import { type OnStart, Service } from "@flamework/core";
+import { Components } from "@flamework/components";
+import { Dependency, Service } from "@flamework/core";
 import { CollectionService, ServerStorage, Workspace } from "@rbxts/services";
 import type { EnemyComponent } from "server/components/EnemyComponent";
 import {
@@ -25,15 +25,8 @@ const EnemyModels = ServerStorage.WaitForChild("Enemies") as Folder;
  * This ensures IDs remain unique across the entire game session.
  */
 @Service()
-export class EnemyService implements OnStart {
+export class EnemyService {
 	private nextEnemyId = 0;
-
-	constructor(private components: Components) {}
-
-	onStart() {
-		// AI is now handled by EnemyComponent via Heartbeat
-		// No central AI loop needed
-	}
 
 	// ==================== ID Generation ====================
 
@@ -49,7 +42,8 @@ export class EnemyService implements OnStart {
 	 * Called when a player leaves to prevent stale references.
 	 */
 	clearTargetReferences(player: Player): void {
-		const enemyComponents = this.components.getAllComponents<EnemyComponent>();
+		const components = Dependency<Components>();
+		const enemyComponents = components.getAllComponents<EnemyComponent>();
 		for (const component of enemyComponents) {
 			component.clearTargetIfPlayer(player);
 		}
@@ -130,7 +124,8 @@ export class EnemyService implements OnStart {
 	 * Note: Enemy IDs are not reset to ensure uniqueness.
 	 */
 	despawnAllEnemies(): void {
-		const enemyComponents = this.components.getAllComponents<EnemyComponent>();
+		const components = Dependency<Components>();
+		const enemyComponents = components.getAllComponents<EnemyComponent>();
 		for (const component of enemyComponents) {
 			// Destroy the model, which will also destroy the component
 			component.instance.Destroy();
@@ -142,7 +137,8 @@ export class EnemyService implements OnStart {
 	 * Used by Game Flow to determine when room is cleared.
 	 */
 	getAliveEnemyCount(roomId?: string): number {
-		const enemyComponents = this.components.getAllComponents<EnemyComponent>();
+		const components = Dependency<Components>();
+		const enemyComponents = components.getAllComponents<EnemyComponent>();
 		let count = 0;
 		for (const component of enemyComponents) {
 			if (!component.isAlive()) continue;
@@ -161,7 +157,8 @@ export class EnemyService implements OnStart {
 	 */
 	dealDamageToEnemy(enemyId: string, amount: number, attacker?: Player): void {
 		// Find the component with the matching enemy ID
-		const enemyComponents = this.components.getAllComponents<EnemyComponent>();
+		const components = Dependency<Components>();
+		const enemyComponents = components.getAllComponents<EnemyComponent>();
 		for (const component of enemyComponents) {
 			if (component.getEnemyId() === enemyId) {
 				component.takeDamage(amount, attacker);
@@ -226,7 +223,8 @@ export class EnemyService implements OnStart {
 	 * Check if boss is alive.
 	 */
 	isBossAlive(): boolean {
-		const enemyComponents = this.components.getAllComponents<EnemyComponent>();
+		const components = Dependency<Components>();
+		const enemyComponents = components.getAllComponents<EnemyComponent>();
 		for (const component of enemyComponents) {
 			if (component.getIsBoss() && component.isAlive()) {
 				return true;

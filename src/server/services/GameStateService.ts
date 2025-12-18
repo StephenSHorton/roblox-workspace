@@ -151,7 +151,7 @@ export class GameStateService implements OnStart {
 
 		// Cancel any existing countdown
 		if (this.countdownThread) {
-			task.cancel(this.countdownThread);
+			pcall(() => task.cancel(this.countdownThread!));
 			this.countdownThread = undefined;
 		}
 

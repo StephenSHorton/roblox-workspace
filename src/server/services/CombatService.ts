@@ -1,5 +1,7 @@
-import { Dependency, type OnStart, Service } from "@flamework/core";
+import { type OnStart, Service } from "@flamework/core";
 import { CollectionService, Players } from "@rbxts/services";
+import { EnemyService } from "./EnemyService";
+import { StatsService } from "./StatsService";
 import Signal from "@rbxts/signal";
 import { Events } from "server/network";
 import { PLAYER, PLAYER_ATTACK } from "shared/config/combat";
@@ -32,8 +34,6 @@ interface PlayerCombatState {
 export class CombatService implements OnStart {
 	private playerStates = new Map<Player, PlayerCombatState>();
 	private pvpEnabled = false;
-	private enemyService!: import("./EnemyService").EnemyService;
-	private statsService!: import("./StatsService").StatsService;
 
 	/**
 	 * Fired when any entity (player or enemy) dies.
@@ -48,11 +48,12 @@ export class CombatService implements OnStart {
 		) => void
 	>();
 
-	onStart() {
-		// Use Dependency() to break circular dependency
-		this.enemyService = Dependency<import("./EnemyService").EnemyService>();
-		this.statsService = Dependency<import("./StatsService").StatsService>();
+	constructor(
+		private enemyService: EnemyService,
+		private statsService: StatsService,
+	) {}
 
+	onStart() {
 		// Handle player join/leave
 		Players.PlayerAdded.Connect((player) => this.initializePlayer(player));
 		Players.PlayerRemoving.Connect((player) => this.cleanupPlayer(player));
